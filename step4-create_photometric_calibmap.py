@@ -174,7 +174,7 @@ for win in ['5577','6300']:
         datads,
         flatds,
         calibds,
-        source_diam,
+        source_diam, # type: ignore
         slit_width,
         foreoptic_fl,
         foreoptic_diam,
@@ -189,5 +189,5 @@ if TEST:
     ds = xr.open_dataset('photometric_calib_map_5577.nc')
     ds.kr.plot()
 # %%
-ds
+# ds
 # %%
