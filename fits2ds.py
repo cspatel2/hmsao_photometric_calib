@@ -107,27 +107,62 @@ allfiles = list(datadir.glob('*/*/*.fit*'))
 print(f"Datadir: {datadir} \n # of subdirs: {len(dirs)} \n # of total files: {len(allfiles)}")
 
 #%%
+pos_identifier = f'{slitsize}um_pos'
+attrsnote= ''
+SKIP = False
+LINFIT = False
+SAVEDS = False
+
 for d in dirs:
     id = d.stem
     if 'dark' in id.lower():
-        print(f'Processing {id} data...') #fits -> ds, save to netcdf
-        FITS2DS = True
+        #fits -> ds, save to netcdf
+        attrsnote= f'{id} dark frames taken at various exposure times'
         LINFIT = False
         SAVEDS = True
     if 'flat' in id.lower():
-        print(f'Processing {id} data...') #fits -> ds, linear fit, save to netcdf
-        FITS2DS = True
+        #fits -> ds, linear fit, save to netcdf
+        attrsnote = f'The {id} are to be used for creating calibration maps for Hit&MIS images.'
         LINFIT = True
         SAVEDS = True
     if 'background' in id.lower():
-        print(f'Processing {id} data...') #fits -> ds, linear fit, save to netcdf
-        FITS2DS = True
+        #fits -> ds, linear fit, save to netcdf
+        attrsnote = f'The {id} is to be used only ask a dark+background correction for the calibration lamp images'
         LINFIT = True
         SAVEDS = False
     if pos_identifier in id.lower():
         print(f'Processing {id} data...') #fits -> ds, linear fit, save to netcdf
-        FITS2DS = True
         LINFIT = True
         SAVEDS = True
 
+    if 'dark' in id.lower() or 'flat' in id.lower() or 'background' in id.lower() or pos_identifier in id.lower():
+        print(f'Processing {id} data...') #fits -> ds
+        all_fns = list(d.glob('*.fit*')) #try getting files in current dir
+        if len(all_fns)>0: # found files in current dir
+            pass #go onto the next step
+        else: 
+            all_fns = list(d.glob('*/*.fits*')) #try getting files in subdirs
+    
+        if len(all_fns)<1: #if no files found in dir and subdirs, skip this id
+            print(f'No fits files found in {d}, skipping...')
+            SKIP = True
+    
+        if not SKIP:
+            ds = convert_fits2ds_exp_y_x(all_fns, attrsnote= attrsnote)
+            if LINFIT:
+                ds = fit_linear_counts_vs_exp(ds)
+            if SAVEDS:
+                encoding = {var: {'zlib': True} for var in (*ds.data_vars.keys(), *ds.coords.keys())}
+                spath = destdir.joinpath(f'{datadir.stem}_{id}_l0.nc')#save path
+                ds.to_netcdf(spath, encoding= encoding)
+                print(f"{id} dataset saved to netcdf with shape: {dict(ds.sizes)}")
+            else:
+                bgds = ds
+            del ds
+    elif pos_identifier in id.lower(): 
+    ########################## START HERE ############################
+        print(f'Processing {id} data...') #fits -> ds, linear fit, save to netcdf
+
+
+        
 
