@@ -7,7 +7,6 @@ from pathlib import Path
 #%% FUNCTIONS
 def convert_fits2ds_exp_y_x(filelist:list[str]|list[Path], attrsnote:str= '') -> xr.Dataset:
     """Converts raw Fits files into xr.Dataset with shape (exp,y,x)
-
     Args:
         filelist (list[str] | list[Path]): File paths to raw fits files
         attrsnote (str, optional): Note to add as an attribute to the Dataset. Defaults to ''.
@@ -42,9 +41,9 @@ def convert_fits2ds_exp_y_x(filelist:list[str]|list[Path], attrsnote:str= '') ->
             'x': (('x',), np.arange(np.shape(imgs)[2]), {'units':'pixels','description':'x pixel index'}), #type: ignore
         },    attrs={
             'description':'HiT&MIS claibration images taken with various exposure times',
-            'source':'HiT&MIS calibration data, 2025',
+            'source': sourcename,
             'slit_size_um': slitsize,
-            'date_created': np.datetime_as_string(np.datetime64('now'), unit='s'),
+            'date_created': np.datetime_as_string(np.datetime64('now'), unit='s', timezone='UTC'),
             'Note': attrsnote}
         ) # type: ignore
     return ds
@@ -91,30 +90,35 @@ def get_exp_from_fn_ASIIMG(fn:str|Path)->str: # The file naming convention for A
     if isinstance(fn, str):
         fn = Path(fn)
     return fn.stem.split('_')[2].strip('sec')
-#%% USER INPUTS
+#%% 
+# ##################  USER INPUTS  #########################
 datdir = Path('data/raw') #input raw data dir
 destdir = Path('data/l0') #input destination dir
 slitsize = 100 #um
+sourcename = 'Gamma Scientific RS-12D Series Calibration Light Source'
+OVERWRITE = True
+pos_identifier = f'pos'
+############################################################
 
-
+#%%
 destdir.mkdir(parents=True, exist_ok=True)
 datadir = list(datdir.glob(f'*{slitsize}um*_2025*'))[0]
 
-# %%
 dirs = list(datadir.iterdir())
 dirs.sort()
 allfiles = list(datadir.glob('*/*/*.fit*'))
 print(f"Datadir: {datadir} \n # of subdirs: {len(dirs)} \n # of total files: {len(allfiles)}")
 
 #%%
-pos_identifier = f'{slitsize}um_pos'
 attrsnote= ''
 SKIP = False
 LINFIT = False
 SAVEDS = False
-
+lampdirs = []
+bgds = None
 for d in dirs:
     id = d.stem
+    spath = destdir.joinpath(f'{datadir.stem}_{id}_l0.nc')#save path
     if 'dark' in id.lower():
         #fits -> ds, save to netcdf
         attrsnote= f'{id} dark frames taken at various exposure times'
@@ -131,38 +135,92 @@ for d in dirs:
         LINFIT = True
         SAVEDS = False
     if pos_identifier in id.lower():
-        print(f'Processing {id} data...') #fits -> ds, linear fit, save to netcdf
-        LINFIT = True
-        SAVEDS = True
-
-    if 'dark' in id.lower() or 'flat' in id.lower() or 'background' in id.lower() or pos_identifier in id.lower():
-        print(f'Processing {id} data...') #fits -> ds
-        all_fns = list(d.glob('*.fit*')) #try getting files in current dir
-        if len(all_fns)>0: # found files in current dir
-            pass #go onto the next step
-        else: 
-            all_fns = list(d.glob('*/*.fits*')) #try getting files in subdirs
+        #fits -> ds, linear fit, save to netcdf
+        lampdirs.append(d)
+    if SAVEDS and spath.exists() and not OVERWRITE:
+        print(f"{id} dataset already exists at {spath}, skipping processing...")
+        SKIP = True
     
-        if len(all_fns)<1: #if no files found in dir and subdirs, skip this id
-            print(f'No fits files found in {d}, skipping...')
-            SKIP = True
-    
-        if not SKIP:
-            ds = convert_fits2ds_exp_y_x(all_fns, attrsnote= attrsnote)
-            if LINFIT:
-                ds = fit_linear_counts_vs_exp(ds)
-            if SAVEDS:
-                encoding = {var: {'zlib': True} for var in (*ds.data_vars.keys(), *ds.coords.keys())}
-                spath = destdir.joinpath(f'{datadir.stem}_{id}_l0.nc')#save path
-                ds.to_netcdf(spath, encoding= encoding)
-                print(f"{id} dataset saved to netcdf with shape: {dict(ds.sizes)}")
-            else:
-                bgds = ds
-            del ds
-    elif pos_identifier in id.lower(): 
-    ########################## START HERE ############################
-        print(f'Processing {id} data...') #fits -> ds, linear fit, save to netcdf
+    if not SKIP:
+        if 'dark' in id.lower() or 'flat' in id.lower() or 'background' in id.lower():
+            print(f'Processing {id} data...') #fits -> ds
+            all_fns = list(d.glob('*.fit*')) #try getting files in current dir
+            if len(all_fns)>0: # found files in current dir
+                pass #go onto the next step
+            else: 
+                all_fns = list(d.glob('*/*.fit*')) #try getting files in subdirs
+            if len(all_fns)<1: #if no files found in dir and subdirs, skip this id
+                print(f'No fits files found in {d}, skipping...')
+                SKIP = True
+        
+            if not SKIP:
+                ds = convert_fits2ds_exp_y_x(all_fns, attrsnote= attrsnote)
+                if LINFIT:
+                    ds = fit_linear_counts_vs_exp(ds)
+                if SAVEDS:
+                    encoding = {var: {'zlib': True} for var in (*ds.data_vars.keys(), *ds.coords.keys())}
+                    spath = destdir.joinpath(f'{datadir.stem}_{id}_l0.nc')#save path
+                    ds.to_netcdf(spath, encoding= encoding)
+                    print(f"{id} dataset saved to netcdf with shape: {dict(ds.sizes)}")
+                else:
+                    bgds = ds
+                del ds
+        else: ''
+#%%
+if len(lampdirs)>0:
+    LINFIT = True
+    SAVEDS = True
+    SKIP = False
+    print(f'Processing lamp position data...') #fits-> ds, linear fit, save to netcdf
+    slits = np.sort(np.unique([d.stem.split('_')[-2] for d in lampdirs]))
+    for s in slits:
+        dslist = []
+        pos = []
+        pdirs = list(datadir.glob(f'*{s}_*'))
+        for pd in pdirs:
+            id = pd.stem
+            pos.append(id.split('_')[-1].strip('in'))
+            all_fns = list(pd.glob('*.fit*')) #try getting files in current dir
+            if len(all_fns)>0: # found files in current dir
+                pass #go onto the next step
+            else: 
+                all_fns = list(pd.glob('*/*.fit*')) #try getting files in subdirs
+        
+            if len(all_fns)<1: #if no files found in dir and subdirs, skip this id
+                print(f'No fits files found in {pd}, skipping...')
+                SKIP = True
+            bgsub_note = ''
+            if not SKIP:
+                ds = convert_fits2ds_exp_y_x(all_fns, attrsnote= attrsnote)
+                if bgds is not None:
+                    ds = ds - bgds
+                    bgsub_note = ' Background subtracted before linear fitting.'
+                else: 
+                    bgsub_note = 'No background corrections applied.'
+                dslist.append(ds)
+            
+            if len(dslist)>0:
+                fullds = xr.concat(dslist, dim= xr.DataArray(np.array(pos, dtype= float), dims= 'pos', 
+                                                    attrs={'units':'inches','description':'distance between foreoptic and lamp'}))
+                fullds.attrs['description'] = f'Calibration lamp images taken at various exposures times using Hit&MIS.'
+                fullds.attrs['slit_size_um'] = slitsize
+                fullds.attrs['date_created'] = np.datetime_as_string(np.datetime64('now'), unit='s',timezone='UTC')
+                fullds.attrs['source'] = sourcename
+                fullds.counts.attrs['units'] = 'ADU'
+                fullds.counts.attrs['description'] = 'Image counts'
+                fullds.attrs['Note'] = bgsub_note
+                print(f"Lamp dataset with {s} slit created with shape: {dict(fullds.sizes)}")
+                if LINFIT:
+                    fullds = fit_linear_counts_vs_exp(fullds)
+                if SAVEDS:
+                    encoding = {var: {'zlib': True} for var in (*fullds.data_vars.keys(), *fullds.coords.keys())}
+                    spath = destdir.joinpath(f'{datadir.stem}_slit_{s}_l0.nc')#save path
+                    fullds.to_netcdf(spath, encoding= encoding)
+                    print(f"{id} dataset saved to netcdf with shape: {dict(fullds.sizes)}")
+                del fullds
+else: print('No lamp position directories found, skipping lamp data processing.')
 
 
         
-
+#%%\
+# tds = xr.open_dataset('data/l0/hmsao_calibration_slit_100um_20251013_slit_br_l0.nc')
