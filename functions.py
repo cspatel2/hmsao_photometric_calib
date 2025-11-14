@@ -1,5 +1,4 @@
 #%%
-
 from datetime import datetime
 import os
 from typing import Iterable, List
@@ -7,6 +6,8 @@ import astropy.io.fits as fits
 import numpy as np
 import xarray as xr
 from typing import SupportsFloat as Numeric
+from skimage import transform
+import matplotlib.pyplot as plt
 
 #%%
 def find_outlier_pixels(data, tolerance=3, worry_about_edges=True):
@@ -181,7 +182,7 @@ def convert_gamma_to_zenithangle(ds: xr.Dataset, plot: bool = False, returnboth:
         {'unit': 'deg', 'long_name': 'Zenith Angle'})
     ds = ds.rename({'gamma': 'za'})
     # replace gamma to linear za values
-    nds.values = timg
+    nds.data = timg
     nds['gamma'] = linangles
     nds['gamma'] = nds['gamma'].assign_attrs(
         {'unit': 'deg', 'long_name': 'Zenith Angle'})
@@ -204,4 +205,4 @@ def convert_gamma_to_zenithangle(ds: xr.Dataset, plot: bool = False, returnboth:
         return nds, ds
     else:
         return nds
-    
+# %%
