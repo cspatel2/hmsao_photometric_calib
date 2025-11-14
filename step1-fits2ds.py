@@ -122,11 +122,11 @@ for d in dirs:
     if 'dark' in id.lower():
         #fits -> ds, save to netcdf
         attrsnote= f'{id} dark frames taken at various exposure times'
-        LINFIT = False
+        LINFIT = True
         SAVEDS = True
     if 'flat' in id.lower():
         #fits -> ds, linear fit, save to netcdf
-        attrsnote = f'The {id} are to be used for creating calibration maps for Hit&MIS images.'
+        attrsnote = f'The {id} are to be used for creating calibration maps for HiT&MIS images.'
         LINFIT = True
         SAVEDS = True
     if 'background' in id.lower():
