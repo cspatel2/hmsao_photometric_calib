@@ -62,8 +62,9 @@ def fit_linear_counts_vs_exp(ds: xr.Dataset) -> xr.Dataset:
             - countrate_err (ADU/s): standard error in countrate from fit
             - bias (ADU): intercept of linear fit to counts vs exp for each pixel
             - bias_err (ADU): standard error in bias from fit  
-    """    
-    fit = ds.counts.polyfit(dim= 'exp', deg = 1, skipna= True, cov =True)
+    """  
+    weight = np.full_like(ds.exp.data, 6) # read noise of 6 counts for full exposure  
+    fit = ds.counts.polyfit(dim= 'exp', deg = 1, skipna= True, w = 1/weight, cov =True)
     fit.polyfit_coefficients.data = fit.polyfit_coefficients.clip(min=0)
     # assign to ds
     ds = ds.assign(countrate = fit.polyfit_coefficients.sel(degree = 1))
