@@ -112,7 +112,6 @@ def convert_l0_to_l1a(fn: Path, destdir: Path, predictor: MisCurveRemover, windo
                 imglist = []
                 for d in kda[dim[0]].data:
                     kds = kda.sel({dim[0]: d}).to_dataset(name=data_var)
-                    print(type(kds))
                     k = kds.map(predictor.straighten_image,win_name=w, coord='Slit')
                     k = convert_gamma_to_zenithangle(k[data_var])
                     imglist.append(k)
@@ -146,7 +145,7 @@ def convert_l0_to_l1a(fn: Path, destdir: Path, predictor: MisCurveRemover, windo
         encoding = {var: {'zlib': True}
                     for var in (*saveds.data_vars.keys(), *saveds.coords.keys())}
         savefn = destdir.joinpath(fn.stem.replace('l0', f'l1_{w}.nc'))
-        print('Saving %s...\t' % (savefn), end='')
+        print('Saving %s...' % (savefn), end='')
         saveds.to_netcdf(savefn, encoding=encoding)
         print(f'Done.')
         del dadict
