@@ -67,9 +67,10 @@ norm = xr.apply_ufunc(
 )
 #%%
 norm = norm.sel(za = slice(-17,15))
-norm -= norm.max()
-# norm /= (norm.max() - norm.min())
+norm -= (norm.max())
+# norm /= (norm.min())
 norm = norm.to_dataset(name = 'line_profile')
+norm.line_profile.plot(y = 'za')
 
 # %%
 savefn = 'line_profile_{win}.nc'
