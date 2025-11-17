@@ -10,6 +10,16 @@ from matplotlib import pyplot as plt
 
 #%%
 def secondary_straightening_core(img:np.ndarray, line_profile:np.ndarray, wlppix:float) -> np.ndarray:
+    """ performs a skimage.tranform.warp() on an image to straighten the spectra.
+
+    Args:
+        img (np.ndarray): image of shape (za, wavelength)
+        line_profile (np.ndarray): line profile of shape (za,)
+        wlppix (float): wavelength per pixel (nm/pixel) 
+
+    Returns:
+        np.ndarray: straightened image of same shape as input img
+    """    
     #create meshgrid of pixel indices for output image coordinates
     xpix = np.arange(img.shape[0])
     ypix = np.arange(img.shape[1])
@@ -29,6 +39,15 @@ def secondary_straightening_core(img:np.ndarray, line_profile:np.ndarray, wlppix
 
 #%%
 def secondary_straightening(ds:xr.Dataset, lprof:xr.Dataset) -> xr.Dataset:
+    """ performs secondary straightening on ds of dims (...,za,wavelength) using skiimage.transform.warp() in the core function.
+
+    Args:
+        ds (xr.Dataset): dataset containing the image with dims ( .., za, wavelength)
+        lprof (xr.Dataset): dataset containing the line profile with dim (za,)
+
+    Returns:
+        xr.Dataset: dataset containing the straightened image with same dims as input ds
+    """    
     #select only the za range for which the line profile is defined
     ds = ds.sel(za = lprof.za)
     #nm per pixel to convert wavelength axis back to pixel units
@@ -43,7 +62,6 @@ def secondary_straightening(ds:xr.Dataset, lprof:xr.Dataset) -> xr.Dataset:
         kwargs={'wlppix': wlppix},
         vectorize=True,
     )
-
     ds.intensity.data = straightened_data.data
     return ds
 # %%
