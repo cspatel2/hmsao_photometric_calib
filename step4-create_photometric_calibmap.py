@@ -1,6 +1,4 @@
-
-
-# %% CREATES A CALIBRATION MAP USING THE CALIBRATION LAMP CURVE, FLATFIELD DATA FROM INSTRUMENT, AND COUNTRATE DATA FROM CALIBRATION LAMP MEASUREMENTS OBTAINED WITH THE INSTRUMENT
+#CREATES A CALIBRATION MAP USING THE CALIBRATION LAMP CURVE, FLATFIELD DATA FROM INSTRUMENT, AND COUNTRATE DATA FROM CALIBRATION LAMP MEASUREMENTS OBTAINED WITH THE INSTRUMENT
 # %%
 import xarray as xr
 import numpy as np
@@ -19,7 +17,7 @@ def get_fnames(datadir, identifier):
 
 
 def create_photometric_calib_map(
-    win: str, datads: xr.Dataset, flatds: xr.Dataset, calibds: xr.Dataset, source_diam:Numeric, slit_width:Numeric, foreoptic_fl:Numeric,foreoptic_diam:Numeric, savedir:str|None=None, sourcename:str ='Gamma Scientific RS-12D Calibration Light Source' ) -> bool:
+    win: str, datads: xr.Dataset, flatds: xr.Dataset, calibds: xr.Dataset, source_diam:float, slit_width:float, foreoptic_fl:float,foreoptic_diam:float, savedir:str|None=None, sourcename:str ='Gamma Scientific RS-12D Calibration Light Source' ) -> bool:
     """
     Create a photometric calibration map (kmap) that converts countrate -> photonrate.
 
@@ -192,3 +190,5 @@ if TEST:
     ds.kr.plot(vmin = np.nanpercentile(ds.kr,0.1), vmax = np.nanpercentile(ds.kr,99.99))
     plt.figure()
     ds.kp.plot(vmin = np.nanpercentile(ds.kp,0.1), vmax = np.nanpercentile(ds.kp,99.99))
+
+# %%
