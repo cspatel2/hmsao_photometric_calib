@@ -13,7 +13,7 @@ from tqdm import tqdm
 # %%
 ######### user inputs #########
 win = '5577'
-datdir = Path('../data/l1a')
+datdir = Path('data/l1a')
 destdir = '' #if empty string, will replace 'l1a' with 'l1b' in datdir path. If None, will use './l1b' as destdir.
 line_profile_path = Path(f'secondary_straightening/line_profile_{win}.nc')
 
@@ -28,6 +28,7 @@ print(f"Destination directory: {destdir}")
 #%%
 fns = list(datdir.glob(f'**/*{win}*.nc'))
 print(f"Found {len(fns)} files to process.")
+fns.sort()
 # %%
 if line_profile_path.exists():
     lprof = xr.open_dataset(line_profile_path)
@@ -43,10 +44,13 @@ else: print("no known data variable found")
 for fn in fns:
     print(f"Processing file: {fn.name}...")
     ds = xr.open_dataset(fn)
-    ss = secondary_straightening(ds, lprof) 
-    ss.tstamp.attrs = ds.tstamp.attrs
-    ss.wavelength.attrs = ds.wavelength.attrs
-    ss.za.attrs = ds.za.attrs
+    if id == 'intensity':
+        ds = ds.rename({'intensity':'countrate'})
+    ss = secondary_straightening(ds, lprof)
+    ss['countrate'] = ss['countrate'].clip(min=0) 
+    all_vars = list(ds.coords) + list(ds.keys())
+    for var in all_vars:
+        ss[var].attrs = ds[var].attrs    
     ss.attrs['DataProcessingLevel'] = 'L1b - Secondary Straightened'
     ss.attrs['FileCreationDate'] = datetime.now().strftime("%m/%d/%Y, %H:%M:%S EDT")
     encoding = {var: {'zlib': True}

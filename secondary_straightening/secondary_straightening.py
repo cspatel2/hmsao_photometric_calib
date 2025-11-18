@@ -53,16 +53,18 @@ def secondary_straightening(ds:xr.Dataset, lprof:xr.Dataset) -> xr.Dataset:
     #nm per pixel to convert wavelength axis back to pixel units
     wlppix = float(np.mean(np.diff(ds.wavelength.data)))
 
+    id = 'countrate'
+
     straightened_data = xr.apply_ufunc(
         secondary_straightening_core,
-        ds.intensity,
+        ds[id],
         lprof.line_profile,
         input_core_dims=[['za', 'wavelength'], ['za']],
         output_core_dims=[['za', 'wavelength']],
         kwargs={'wlppix': wlppix},
         vectorize=True,
     )
-    ds.intensity.data = straightened_data.data
+    ds[id].data = straightened_data.data
     return ds
 # %%
 EXAMPLE = False
