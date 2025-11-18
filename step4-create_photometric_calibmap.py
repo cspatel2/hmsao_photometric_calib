@@ -8,6 +8,7 @@ import os
 import matplotlib.pyplot as plt
 from glob import glob
 from scipy.signal import find_peaks, peak_widths
+from typing import SupportsFloat as Numeric
 
 
 # %%
@@ -18,7 +19,7 @@ def get_fnames(datadir, identifier):
 
 
 def create_photometric_calib_map(
-    win: str, datads: xr.Dataset, flatds: xr.Dataset, calibds: xr.Dataset, source_diam:float, slit_width:float, foreoptic_fl:float,foreoptic_diam:float, savedir:str|None=None, sourcename:str ='Gamma Scientific RS-12D Calibration Light Source' ) -> bool:
+    win: str, datads: xr.Dataset, flatds: xr.Dataset, calibds: xr.Dataset, source_diam:Numeric, slit_width:Numeric, foreoptic_fl:Numeric,foreoptic_diam:Numeric, savedir:str|None=None, sourcename:str ='Gamma Scientific RS-12D Calibration Light Source' ) -> bool:
     """
     Create a photometric calibration map (kmap) that converts countrate -> photonrate.
 
@@ -32,13 +33,13 @@ def create_photometric_calib_map(
         Dataset containing flatfield measurements.
     calibds : xr.Dataset
         Dataset containing calibration lamp curve.
-    source_diam : float
+    source_diam : Numeric
         Diameter of the calibration lamp source in inches.
-    slit_width : float
+    slit_width : Numeric
         Width of the slit at the foreoptic in cm.
-    foreoptic_fl : float
+    foreoptic_fl : Numeric
         Effective focal length of the foreoptic in mm.
-    foreoptic_diam : float
+    foreoptic_diam : Numeric
         Diameter of the foreoptic lens in cm.
     savedir : str, optional
         Directory to save the calibration map. If None, the map is not saved.
@@ -99,8 +100,8 @@ def create_photometric_calib_map(
     # Calculate calibration factor for each wavelength in a row
     k = cr_enter / cr_measured
     # Normalize flatfield data
-    flatds = flatds.countrate.isel(pos = 0) #does not have >1 pos
-    flatds = flatds.drop_vars('pos')
+    flatds = flatds.countrate #.isel(pos = 0) #does not have >1 pos
+    # flatds = flatds.drop_vars('pos')
     flatda = flatds.copy()
     ref_values = flatda.sel(za = za_norm, method = 'nearest').data
     flatda /= ref_values  # normalize to lamp signal za postion
@@ -153,41 +154,41 @@ df = pd.read_csv('calib_geo.csv', comment='#')
 df = df.set_index('item')
 source_diam= df.loc['source_diam','value']
 slit_width= df.loc['slit_width','value']
-foreoptic_fl= df.loc['foreopti_fl','value']
+foreoptic_fl= df.loc['foreoptic_fl','value']
 foreoptic_diam= df.loc['foreoptic_diam','value']
 
-datadir = 'data/l1a_ss'
+datadir = 'data/l1b'
 #calibration lamp curve data
-calibds = xr.open_dataset('Gamma_Scientific_D300_HL2372_calibcurve.nc')
+calibds = xr.open_dataset('D300 HL2372 2025-09-11.nc')
 for win in ['5577','6300']:
     print(f'Processing window: {win}')
     #calibration lamp imgs from hms
-    fnames = get_fnames(datadir,f'*{win}*')
+    fnames = get_fnames(datadir,f'*slit_bl*{win}*')
     datads = xr.open_dataset(fnames[0])
 
     #flatfield data from hms
-    fnames = get_fnames(datadir, f'flat*{win}')
+    fnames = get_fnames(datadir, f'*flat*{win}*')
     flatds = xr.open_dataset(fnames[0])
-
+    
     kmap = create_photometric_calib_map(
         win,
         datads,
         flatds,
         calibds,
         source_diam, # type: ignore
-        slit_width,
-        foreoptic_fl,
-        foreoptic_diam,
+        slit_width, # type: ignore
+        foreoptic_fl, # type: ignore
+        foreoptic_diam, # type: ignore
         savedir = '')
 
 # %%
 
 # %%
 #test
-TEST = True
+TEST = False
 if TEST:
     ds = xr.open_dataset('photometric_calib_map_5577.nc')
-    ds.kr.plot()
-# %%
-# ds
-# %%
+    plt.figure()
+    ds.kr.plot(vmin = np.nanpercentile(ds.kr,0.1), vmax = np.nanpercentile(ds.kr,99.99))
+    plt.figure()
+    ds.kp.plot(vmin = np.nanpercentile(ds.kp,0.1), vmax = np.nanpercentile(ds.kp,99.99))

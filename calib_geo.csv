@@ -1,0 +1,5 @@
+item,value,units
+source_diam,2.0,in
+slit_width,0.1,cm
+foreoptic_fl,50.0,mm
+foreoptic_diam,5.0,cm
