@@ -1,0 +1,5 @@
+item,value,units,comment
+source_diam,3.0,in, #3IN
+slit_width,0.01,cm  ,#100UM
+foreoptic_fl,2.5,cm  ,#25MM
+foreoptic_diam,1.8,cm ,#18MM

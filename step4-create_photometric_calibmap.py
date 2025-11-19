@@ -36,7 +36,7 @@ def create_photometric_calib_map(
     slit_width : Numeric
         Width of the slit at the foreoptic in cm.
     foreoptic_fl : Numeric
-        Effective focal length of the foreoptic in mm.
+        Effective focal length of the foreoptic in cm.
     foreoptic_diam : Numeric
         Diameter of the foreoptic lens in cm.
     savedir : str, optional
@@ -80,7 +80,7 @@ def create_photometric_calib_map(
     
     # convert power to photonrate
     h = 6.626e-34  # Planck's constant in J*s
-    c = 3e8  # Speed of light in m/s
+    c = 2.998e8  # Speed of light in m/s
     hclam = (h * c) / (datads.wavelength.data * 1e-9)  # Convert wavelength from nm to m for calculation, result in J
     calibda = calibda / hclam  # in photons/(s sr cm^2 nm)
     calibda = calibda * dwl  # in countrate/(sr cm^2)
@@ -133,7 +133,7 @@ def create_photometric_calib_map(
             "source_name": sourcename,
             "source_diam_in": source_diam,
             "slit_width_cm": slit_width,
-            "foreoptic_focal_length_mm": foreoptic_fl,
+            "foreoptic_focal_length_cm": foreoptic_fl,
             "foreoptic_diameter_cm": foreoptic_diam,
             'date_created': np.datetime_as_string(np.datetime64('now'), unit='s'),
         },
@@ -148,7 +148,7 @@ def create_photometric_calib_map(
 # %%
 import pandas as pd
 # calibration geometry parameters
-df = pd.read_csv('calib_geo.csv', comment='#')
+df = pd.read_csv('calib_params_hmsao_slit_100um.csv', comment='#')
 df = df.set_index('item')
 source_diam= df.loc['source_diam','value']
 slit_width= df.loc['slit_width','value']
