@@ -1,11 +1,12 @@
 # perform secondary straightening on a l1a dataset based on a provided line profile
+# NOTE: THIS IS A COPY OF THE SECONDARY_STRAIGHTENING SCRIPT, IN L1B CONVERTER . CAN USE THAT SCRIPT DIRECTLY INSTEAD.
 #%%
 from datetime import datetime
 import numpy as np
 import xarray as xr
 from skimage import transform
 from pathlib import Path
-from secondary_straightening.secondary_straightening import secondary_straightening
+from secondary_straightening import secondary_straightening
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 # %%
@@ -13,7 +14,7 @@ from tqdm import tqdm
 # %%
 ######### user inputs #########
 windows = ['5577', '6300']
-datdir = Path('../data/l1a')
+datdir = Path('data/l1a')
 destdir = '' #if empty string, will replace 'l1a' with 'l1b' in datdir path. If None, will use './l1b' as destdir.
 lineprofile_dir = Path('secondary_straightening')
 ##################################
